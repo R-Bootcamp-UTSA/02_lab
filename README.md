@@ -1,21 +1,18 @@
 # 02_lab
-Lab 2: Data wrangling
-
+Lab 2: Data wrangling and visualization
 
 Learning Objectives:
 
 *First half: 10:00am-10:50am*
-*	Loading data
-*	The Base R framework for data wrangling 
-  - Filtering/Indexing
-  - Variable creation
-  - Summarizing a dataset
-* The data.table way
+*	The `data.frame` basis
+* The `data.table` syntax for data manipulation
   - data.frames vs. data.tables
   - Filtering/Indexing
   - Variable creation
   - Operation by a third variable
+* Learn change, create, delete, sort, variables within a dataset.
 
-
-*Second half: 10:00am-10:50am*
-  - Intro to Data visualization
+*Second half: 11:00am-11:50am*
+*	Merge or combine two datasets
+*	Aggregate a data set
+*	Data visualization
