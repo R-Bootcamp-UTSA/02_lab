@@ -10,29 +10,35 @@
 
 # 1. The `data.table` syntax for data manipulation
 # 2. Learn change, create, delete, sort, variables within a dataset.
-# 3. Merge or combine two datasets
-# 4. Aggregate a data set
+# 3. Merge or combine two datasets, map visualization
+# 4. Data visualization
 
 
 # Part 0. The `data.frame` basis and why do we need `data.table`
-
+# Let's read the data using `data.frame`.
+# 3.38 sec elapsed
+# “User CPU time” gives the CPU time spent by the current process 
+# (i.e., the current R session)
+# “system CPU time” gives the CPU time spent by the kernel 
+# (the operating system) on behalf of the current process. 
 d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 
 system.time({
   d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 })
 
+
+##How could we access a vairable in `data.frame` ?
 d0$czname # access a variable within dataset
 d0[,c("czname")] #same
 
-d0_SA<-d0[d0$czname=="San Antonio",] # Filters only SA data
 
+#How could we filter data records with conditions?
+d0_SA<-d0[d0$czname=="San Antonio", ] # Filters only SA data
+
+#How to create a new variable?
 d0$ln_income<-log(d0$hhinc_mean2000) # creates a variable
-
-by(d0[,c("hhinc_mean2000","mean_commutetime2000")],INDICES = d0$czname, FUN = function(x){sapply(x, mean,na.rm=T)}) # operations by a third variable
-
-by(d0_SA[,c("hhinc_mean2000")],INDICES = d0_SA$czname, FUN = function(x){which(is.na(x))}) # operations by a third variable
-d0_SA[c(374,377),]
+d0$ln_income<-NULL # delete a variable
 
 
 #---- Part 1: The `data.table` syntax for data manipulation ----
@@ -49,92 +55,117 @@ system.time({
 
 class(d1)
 
+#How could we access a variable in `data.table` ? It is same as data.frame
 d1$czname # access a variable within dataset
 d1[,.(state,county,tract)] #same, but better
 
+#How to find city names where hh income is greater than 50000 and 
+#poor share is less than 5%?
 d1[hhinc_mean2000>50000 & poor_share2000<0.05,names(table(czname))]
 
 View(d1[,.N,by=czname])
+#'.N' is a special built-in variable that holds the number of observations 
+#in the current group. It is particularly useful when combined with 'by'
+
+#How could we filter data records with conditions in data.table?
+d1[czname=="San Antonio",] # Filters only SA data, compare it with line 37
 
 
-
-d1[czname=="San Antonio",] # Filters only SA data
-
+#How to create in data.table? colon + equal 
 d1[,ln_income:=log(hhinc_mean2000)] # creates a variable
+d1[,ln_income:=NULL]       # remove a column by reference
 
-
+#How to get the mean value of hh income for each city 
+#'na.rm', To exclude missing values when performing these calculations
 mean_values<-d1[,mean(hhinc_mean2000,na.rm=TRUE), by=czname]
 
-d1[,.(mean(hhinc_mean2000,na.rm=TRUE),mean(poor_share2000,na.rm=TRUE)), by=.(state)]
+#How to get the mean value of for multiple columns, at the state level 
+mean_values_incom_poor<-d1[,.(mean(hhinc_mean2000,na.rm=TRUE),
+                               mean(poor_share2000,na.rm=TRUE)), 
+                               by=.(state)]
 
-d1[,.(mean_income=mean(hhinc_mean2000),mean_com_time=mean(mean_commutetime2000)),by=czname] # operations by a third variable
+#How to change the column names? "v1", "v2" are default names
+colnames(mean_values_incom_epoor)[2] <- "mean_income_share"
+colnames(mean_values_incom_epoor)[3] <- "mean_poor_share"
 
-d1[czname=="San Antonio",which(is.na(hhinc_mean2000))] # operations by a third variable
-d1[czname=="San Antonio" & is.na(hhinc_mean2000)==T,]
-
-d1[czname=="San Antonio",][c(374,377),] #checking same result
-
+#of course, we have include more variables for the calcualtion
+mean_values_incom_poor_pop<-d1[,.(mean(hhinc_mean2000,na.rm=TRUE),
+                               mean(poor_share2000,na.rm=TRUE), 
+                               mean(popdensity2000,na.rm=TRUE)), 
+                            by=.(state)]
 
 #----- Part 2. Learn change, create, delete, sort, variables within a dataset.-----
 
+# How to get the count of cities in the table
 d1[,table(czname)] # variable exploration - counts
-d1[,.N, by=.(czname)] #alternative
+count_city=d1[,.N, by=.(czname)] #alternative
 
-
+# What if we only need the information about our city?
 SA_OI<- d1[czname=="San Antonio",] # filtering + object creation (subsetting)
 
-SA_OI<- SA_OI[is.na(hhinc_mean2000)==FALSE,] # creating an object without na's (careful version of na.omit() function)
+# How to get rid of unknown objects
+SA_OI<- SA_OI[is.na(hhinc_mean2000)==FALSE,] # creating an object without na's
 
+# create a new variable
 SA_OI[, ones:=1] # variable creation
 
-SA_OI[,]
+# create a new variable, hh income less than the median income
+SA_OI[hhinc_mean2000<=quantile(hhinc_mean2000,probs = 0.5), 
+      bellow_medianIncome:=1] # variable creation by condition
 
-SA_OI[hhinc_mean2000<=quantile(hhinc_mean2000,probs = 0.5), bellow_medianIncome:=1 ] # variable creation by condition
-SA_OI[is.na(bellow_medianIncome),bellow_medianIncome:=0] # variable value replacement by condition
+#quantile(SA_OI$hhinc_mean2000,probs = 0.5) #probs: Numeric vector of probabilities
 
+# define 0 for tracts above median income
+SA_OI[is.na(bellow_medianIncome), bellow_medianIncome:=0] # variable value replacement by condition
+
+# calculate the median household income growth rate
 SA_OI[, med_hhinc_growth1990_2006:=((med_hhinc2016-med_hhinc1990)/med_hhinc1990)*100]# variable creation by a mathematical manipulation of other variables.
 
 
 #---- Part 3. Merge or combine two datasets ----
+# download census data using the API
+install.packages('tidycensus')
 
 library(tidycensus)
 
-census_api_key("0d539976d5203a96fa55bbf4421110d4b3db3648")# you must acquired your own key at http://api.census.gov/data/key_signup.html
+census_api_key("0d539976d5203a96fa55bbf4421110d4b3db3648",install = TRUE)# you must acquired your own key at http://api.census.gov/data/key_signup.html
 
+#Capture the census tract-level median income data in Bexar county
+#Margins of error (MOE) are provided for every American Community Survey (ACS) estimate.
 bexar_medincome <- get_acs(geography = "tract", variables = "B19013_001",
                            state = "TX", county = "Bexar", geometry = TRUE,year = 2019)
-
-bexar_medincome
 
 plot(bexar_medincome)
 
 
-#merge SA_OI data with the map
+#Next, let's merge SA_OI data with the map
 
+#check the 
 head(SA_OI) ; head(bexar_medincome)
 
 SA_OI[,GEOID:=paste0(state,"0",county,tract)] #creating a GEOID variable to have a common variable between the two data sets
 
 #check variable classes
-
 class(bexar_medincome$GEOID)
 class(SA_OI$GEOID)
 
+#find how many of them have overlaps
 table(bexar_medincome$GEOID %in%  SA_OI$GEOID) # checking overlap
-
 
 # merge/join by GEOIDS
 bexar_medincome2 <- merge(bexar_medincome,SA_OI,by="GEOID",)
 
 #plotting
-
 plot(bexar_medincome2[,"med_hhinc_growth1990_2006"])# fast plotting
 
-library(ggplot2);library(viridis) # prettier plotting
+library(ggplot2)
+library(viridis) # prettier plotting
 ggplot(bexar_medincome2)+
   geom_sf(aes(fill=med_hhinc_growth1990_2006))+
+  #geom_sf(aes(fill=med_hhinc1990))+  #we can change the variable
   scale_fill_viridis(option = "magma") +
   scale_color_viridis(option = "magma")
+
 
 library(leaflet) # dynamic plotting
 
@@ -142,27 +173,36 @@ pal <- colorQuantile("YlOrRd", domain = bexar_medincome2$med_hhinc_growth1990_20
 
 leaflet(bexar_medincome2)%>%
   addProviderTiles(provider = providers$CartoDB.Positron)%>%
-  addPolygons(fillColor = ~pal(med_hhinc_growth1990_2006),label = ~med_hhinc_growth1990_2006,color=~pal(med_hhinc_growth1990_2006),fillOpacity = 0.5,weight = 0.1)%>%
+  addPolygons(fillColor = ~pal(med_hhinc_growth1990_2006),
+              label = ~med_hhinc_growth1990_2006,
+              color=~pal(med_hhinc_growth1990_2006),
+              fillOpacity = 0.5,
+              weight = 0.1)%>%
   addLegend(pal = pal,values = ~med_hhinc_growth1990_2006,opacity = 1,title = "Income Growth 1990-2016",labels = c("a","b","c","d","e"))
 
-#----- Part 4. Aggregate a data set-----
 
-d1_cstate<-d1[,.(mean_poorshare_2010=mean(poor_share2010,na.rm=T), singleparent_share2000=mean(singleparent_share2000,na.rm=T)),by=.(state)]
-
-
-#----- Part 5. Data visualization-----
-
+#----- Part 4. Data visualization-----
 bb<-fread("https://data.sanantonio.gov/dataset/05012dcb-ba1b-4ade-b5f3-7403bc7f52eb/resource/fbb7202e-c6c1-475b-849e-c5c2cfb65833/download/accelasubmitpermitsextract.csv")
 names(bb)
 
+# get the count of different permit applications
 bb[,.N,by=.(`PERMIT TYPE`)]
 
+# we can find the permit type for "Res Building Application" only, and then get the count of date issued
 bb[`PERMIT TYPE`=="Res Building Application",.N,by=.(`DATE ISSUED`)]
+
+# we can also do it for data submitted
 bb[`PERMIT TYPE`=="Res Building Application",.N,by=.(`DATE SUBMITTED`)]
+
+# ensure the date submitted is in R-recognized date
 bb[,date:=as.Date(`DATE SUBMITTED`)]
+class(bb$`DATE SUBMITTED`)
+class(bb$date)
 
+ggplot(bb[`PERMIT TYPE`=="Res Building Application",.N,by=.(date)],
+       aes(x=date,y=N))+
+       geom_line()
 
-ggplot(bb[`PERMIT TYPE`=="Res Building Application",.N,by=.(date)],aes(x=date,y=N))+geom_line()
 bb[,mm:=month(date)]
 bb[,yy:=year(date)]
 
