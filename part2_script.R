@@ -140,7 +140,7 @@ plot(bexar_medincome)
 
 #Next, let's merge SA_OI data with the map
 
-#check the 
+#check the column names
 head(SA_OI) ; head(bexar_medincome)
 
 SA_OI[,GEOID:=paste0(state,"0",county,tract)] #creating a GEOID variable to have a common variable between the two data sets
