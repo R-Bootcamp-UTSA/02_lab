@@ -2,6 +2,8 @@
 Lab 2: Data wrangling and visualization
 
 Learning Objectives:
+* Knowing how to process data using data.table
+* Knowing what kind of visualization could be made by R
 
 *First half: 10:00am-10:50am*
 *	The `data.frame` basis
