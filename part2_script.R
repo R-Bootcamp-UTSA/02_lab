@@ -15,30 +15,37 @@
 
 #data.table is a package that extends data.frames. 
 #Two of data.table's most notable features are speed and cleaner syntax.
-# Part 0. The `data.frame` basis and why do we need `data.table`
-# Let's read the data using `data.frame`. 3.38 sec elapsed
-# “User CPU time” gives the CPU time spent by the current process (i.e., the current R session)
-# “system CPU time” gives the CPU time spent by the kernel (the operating system) on behalf of the current process.
+#Part 0. The `data.frame` basis and why do we need `data.table`
 
-#data.table
+#data.table, read data 
 d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
+#Of course, we can use "Import Dataset" directly
 
+# Let's read the data using `data.frame`. 3.38 sec elapsed
 system.time({
   d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 })
-
+# “User CPU time” gives the CPU time spent by the current process (i.e., the current R session)
+# “system CPU time” gives the CPU time spent by the kernel (the operating system) on behalf of the current process.
 
 ##How could we access a vairable in `data.frame` ?
 d0$czname # access a variable within dataset
 d0[,c("czname")] #same
 
 
-#How could we filter data records with conditions?
+#How could we filter data records with conditions in data.frame?
 d0_SA<-d0[d0$czname=="San Antonio", ] # Filters only SA data
+
 
 #How to create a new variable?
 d0$ln_income<-log(d0$hhinc_mean2000) # creates a variable
 d0$ln_income<-NULL # delete a variable
+
+#What if we want to know the mean income  and mean commute time of the tracts in each city
+by(d0[,c("hhinc_mean2000","mean_commutetime2000")],
+   INDICES = d0$czname, 
+   FUN = function(x){sapply(x, mean,na.rm=T)}) # operations by a third variable
+#you can define the function by yourself, try FUN = function(x){sapply(x, max,na.rm=T)
 
 
 #---- Part 1: The `data.table` syntax for data manipulation ----
@@ -59,17 +66,15 @@ class(d1)
 d1$czname # access a variable within dataset
 d1[,.(state,county,tract)] #same, but better
 
-#How to find city names where hh income is greater than 50000 and 
-#poor share is less than 5%?
+#How to find city names where hh income is greater than 50000 and poor share is less than 5%?
 d1[hhinc_mean2000>50000 & poor_share2000<0.05,names(table(czname))]
 
 View(d1[,.N,by=czname])
-#'.N' is a special built-in variable that holds the number of observations 
-#in the current group. It is particularly useful when combined with 'by'
+#'.N' is a special built-in variable that holds the number of observations in the current group.
 
 #How could we filter data records with conditions in data.table?
-d1[czname=="San Antonio",] # Filters only SA data, compare it with line 37
-
+d1[czname=="San Antonio",] # Filters only SA data, compare it data.frame above
+#d0[czname=="San Antonio",]
 
 #How to create in data.table? colon + equal 
 d1[,ln_income:=log(hhinc_mean2000)] # creates a variable
@@ -93,6 +98,8 @@ mean_values_incom_poor_pop<-d1[,.(mean(hhinc_mean2000,na.rm=TRUE),
                                mean(poor_share2000,na.rm=TRUE), 
                                mean(popdensity2000,na.rm=TRUE)), 
                             by=.(state)]
+
+d1[,.(mean_income=mean(hhinc_mean2000),mean_com_time=mean(mean_commutetime2000)),by=czname] # operations by a third variable
 
 #----- Part 2. Learn change, create, delete, sort, variables within a dataset.-----
 
