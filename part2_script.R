@@ -13,14 +13,14 @@
 # 3. Merge or combine two datasets, map visualization
 # 4. Data visualization
 
-
+#data.table is a package that extends data.frames. 
+#Two of data.table's most notable features are speed and cleaner syntax.
 # Part 0. The `data.frame` basis and why do we need `data.table`
-# Let's read the data using `data.frame`.
-# 3.38 sec elapsed
-# “User CPU time” gives the CPU time spent by the current process 
-# (i.e., the current R session)
-# “system CPU time” gives the CPU time spent by the kernel 
-# (the operating system) on behalf of the current process. 
+# Let's read the data using `data.frame`. 3.38 sec elapsed
+# “User CPU time” gives the CPU time spent by the current process (i.e., the current R session)
+# “system CPU time” gives the CPU time spent by the kernel (the operating system) on behalf of the current process.
+
+#data.table
 d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 
 system.time({
