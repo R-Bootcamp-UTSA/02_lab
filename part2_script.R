@@ -21,7 +21,7 @@
 d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 #Of course, we can use "Import Dataset" directly
 
-# Let's read the data using `data.frame`. 3.38 sec elapsed
+# Let's read the data using `data.frame`. 3-4 sec elapsed
 system.time({
   d0<-read.csv("https://opportunityinsights.org/wp-content/uploads/2018/10/tract_covariates.csv",header = T)
 })
@@ -143,7 +143,7 @@ bexar_medincome <- get_acs(geography = "tract", variables = "B19013_001",
                            state = "TX", county = "Bexar", geometry = TRUE,year = 2019)
 
 plot(bexar_medincome)
-
+#Census API Codebook: https://api.census.gov/data/2020/acs/acs5/variables.html
 
 #Next, let's merge SA_OI data with the map
 
@@ -181,10 +181,14 @@ ggplot(bexar_medincome2)+
 
 library(leaflet) # dynamic plotting
 
+'colorQuantile maps numeric input data to a fixed number of output colors using 
+quantiles (slicing the input domain into subsets with equal numbers of observations).'
+#https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/, e.g.,"YlGnBu",
 pal <- colorQuantile("YlOrRd", domain = bexar_medincome2$med_hhinc_growth1990_2006,n = 5)
 
+
 leaflet(bexar_medincome2)%>%
-  addProviderTiles(provider = providers$CartoDB.Positron)%>%
+  addProviderTiles(provider = providers$CartoDB.Positron)%>% #we can change the base map
   addPolygons(fillColor = ~pal(med_hhinc_growth1990_2006),
               label = ~med_hhinc_growth1990_2006,
               color=~pal(med_hhinc_growth1990_2006),
